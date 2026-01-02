@@ -73,13 +73,14 @@ export function useGameState() {
         return prev;
       }
 
+      const currentMultiplier = prev.currentMultiplier;
       const sellAmount = position.amount * (percentage / 100);
       const remainingAmount = position.amount - sellAmount;
 
       if (percentage >= 100) {
         const updatedPosition: Position = {
           ...position,
-          exitMultiplier: prev.currentMultiplier,
+          exitMultiplier: currentMultiplier,
           exitTimestamp: Date.now(),
           isSold: true,
           amount: 0,
@@ -89,6 +90,8 @@ export function useGameState() {
           p.id === positionId ? updatedPosition : p
         );
 
+        const frozenPnL = calculateTotalPnL(updatedPositions, currentMultiplier);
+
         setTimeout(() => {
           isSellingRef.current = false;
         }, 0);
@@ -96,13 +99,13 @@ export function useGameState() {
         return {
           ...prev,
           positions: updatedPositions,
-          totalPnL: calculateTotalPnL(updatedPositions, prev.currentMultiplier),
+          totalPnL: frozenPnL,
           averagePrice: calculateAveragePrice(updatedPositions),
         };
       } else {
         const soldPosition: Position = {
           ...position,
-          exitMultiplier: prev.currentMultiplier,
+          exitMultiplier: currentMultiplier,
           exitTimestamp: Date.now(),
           isSold: true,
           amount: sellAmount,
@@ -117,6 +120,8 @@ export function useGameState() {
           .filter(p => p.id !== positionId)
           .concat([soldPosition, remainingPosition]);
 
+        const frozenPnL = calculateTotalPnL(updatedPositions, currentMultiplier);
+
         setTimeout(() => {
           isSellingRef.current = false;
         }, 0);
@@ -124,7 +129,7 @@ export function useGameState() {
         return {
           ...prev,
           positions: updatedPositions,
-          totalPnL: calculateTotalPnL(updatedPositions, prev.currentMultiplier),
+          totalPnL: frozenPnL,
           averagePrice: calculateAveragePrice(updatedPositions),
         };
       }
@@ -169,11 +174,16 @@ export function useGameState() {
 
         const updatedCandles = [...prev.candles.slice(-99), newCandle];
 
+        const activePositions = prev.positions.filter(p => !p.isSold);
+        const newTotalPnL = activePositions.length > 0
+          ? calculateTotalPnL(prev.positions, newMultiplier)
+          : prev.totalPnL;
+
         return {
           ...prev,
           currentMultiplier: newMultiplier,
           candles: updatedCandles,
-          totalPnL: calculateTotalPnL(prev.positions, newMultiplier),
+          totalPnL: newTotalPnL,
         };
       });
 
