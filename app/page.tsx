@@ -5,6 +5,7 @@ import { useGameState } from '@/hooks/useGameState';
 import CrashChart from '@/components/CrashChart';
 import TradingPanel from '@/components/TradingPanel';
 import GameControls from '@/components/GameControls';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { ChartConfig } from '@/types';
 
 export default function Home() {
@@ -51,17 +52,21 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <div className="bg-crash-card rounded-lg p-4">
-              <CrashChart gameState={state} config={chartConfig} />
+              <ErrorBoundary>
+                <CrashChart gameState={state} config={chartConfig} />
+              </ErrorBoundary>
             </div>
           </div>
 
           <div className="lg:col-span-1">
-            <TradingPanel
-              gameState={state}
-              onBuy={handleBuy}
-              onSell={handleSell}
-              isConnected={true}
-            />
+            <ErrorBoundary>
+              <TradingPanel
+                gameState={state}
+                onBuy={handleBuy}
+                onSell={handleSell}
+                isConnected={true}
+              />
+            </ErrorBoundary>
           </div>
         </div>
 
