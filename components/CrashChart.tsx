@@ -31,9 +31,10 @@ const CrashChart = memo(({ gameState, config }: CrashChartProps) => {
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    const now = Date.now();
-    if (now - lastRenderRef.current < 16) return;
-    lastRenderRef.current = now;
+    const render = () => {
+      const now = Date.now();
+      if (now - lastRenderRef.current < 16 && !gameState.isRunning) return;
+      lastRenderRef.current = now;
 
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, config.width, config.height);
@@ -135,10 +136,28 @@ const CrashChart = memo(({ gameState, config }: CrashChartProps) => {
       if (position.isSold) return;
 
       const candleIndex = visibleCandles.findIndex(
-        c => c.timestamp >= position.entryTimestamp
+        c => Math.abs(c.timestamp - position.entryTimestamp) < 100 || c.timestamp >= position.entryTimestamp
       );
 
-      if (candleIndex === -1) return;
+      if (candleIndex === -1) {
+        if (visibleCandles.length > 0 && position.entryTimestamp < visibleCandles[0].timestamp) {
+          const x = getCandleX(0, config);
+          const y = getMultiplierY(position.entryMultiplier, config);
+
+          ctx.fillStyle = '#3b82f6';
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#3b82f6';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, config.padding.top + chartHeight);
+          ctx.stroke();
+        }
+        return;
+      }
 
       const x = getCandleX(candleIndex, config);
       const y = getMultiplierY(position.entryMultiplier, config);
@@ -174,6 +193,16 @@ const CrashChart = memo(({ gameState, config }: CrashChartProps) => {
         config.padding.left + 120,
         config.padding.top - 5
       );
+    }
+    };
+
+    render();
+
+    if (gameState.isRunning) {
+      const animationFrame = requestAnimationFrame(() => {
+        render();
+      });
+      return () => cancelAnimationFrame(animationFrame);
     }
   }, [gameState, config, visibleCandles]);
 
