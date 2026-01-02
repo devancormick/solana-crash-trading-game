@@ -31,15 +31,27 @@ const CrashChart = memo(({ gameState, config }: CrashChartProps) => {
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
+    let animationFrameId: number;
+
     const render = () => {
       const now = Date.now();
-      if (now - lastRenderRef.current < 16 && !gameState.isRunning) return;
+      if (now - lastRenderRef.current < 16 && !gameState.isRunning) {
+        if (gameState.isRunning) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+        return;
+      }
       lastRenderRef.current = now;
 
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, config.width, config.height);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, config.width, config.height);
 
-    if (visibleCandles.length === 0) return;
+      if (visibleCandles.length === 0) {
+        if (gameState.isRunning) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+        return;
+      }
 
     const chartWidth = config.width - config.padding.left - config.padding.right;
     const chartHeight = config.height - config.padding.top - config.padding.bottom;
@@ -194,16 +206,19 @@ const CrashChart = memo(({ gameState, config }: CrashChartProps) => {
         config.padding.top - 5
       );
     }
+
+      if (gameState.isRunning) {
+        animationFrameId = requestAnimationFrame(render);
+      }
     };
 
     render();
 
-    if (gameState.isRunning) {
-      const animationFrame = requestAnimationFrame(() => {
-        render();
-      });
-      return () => cancelAnimationFrame(animationFrame);
-    }
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [gameState, config, visibleCandles]);
 
   return (
